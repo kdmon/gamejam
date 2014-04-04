@@ -1,0 +1,247 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+<link rel="stylesheet" href="/style/home.css">
+<link href="http://fonts.googleapis.com/css?family=Corben:bold" rel="stylesheet" type="text/css">
+ <link href="http://fonts.googleapis.com/css?family=Nobile" rel="stylesheet" type="text/css">
+<script src="/socket.io/socket.io.js"></script>
+<script src="init.js"></script>
+<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+<script>
+$(document).on('click', '#team1', function(e){
+  joinGame (1);
+  $(".team2").hide();
+  tree = 1;
+  enemyTree = 2;
+});
+
+$(document).on('click', '#team2', function(e){
+  joinGame (2);
+  $(".team1").hide();
+  tree = 2;
+  enemyTree = 1;
+});
+
+$(document).on('click', '.grow', function(e){
+  change (tree, delta);
+  $(this).hide();
+  var obj = $(this);
+  setTimeout(function () {$(obj).show();}, 800);
+});
+
+$(document).on('click', '.reset', function(e){
+  reset();
+});
+
+
+$(document).on('click', '.stunt', function(e){
+  change (enemyTree, -delta);
+  $(this).hide();
+  var obj = $(this);
+  setTimeout(function () {$(obj).show();}, 800);
+});
+</script>
+
+<style>
+p, li {font-size: 20px;}
+</style>
+</head>
+
+<body>
+
+
+<div id="welcome">
+
+<div class="container">
+
+    <h1> Tree game </h1>
+<p>
+The general objective is to make the tree growth gradually along with the action imposed by players. Players could be more than one. The below steps you should follow:
+</p>
+
+<ol>
+<li> Open app on your phone</li>
+<li> Connect it with PC which should have been connected to the projector screen</li>
+<li> There are positive factors contributing to the tree growth, sunlight, rain, air, and negative factor shake slow the growth. </li>
+
+<p>Sunlight- keep tapping for competing the sunlight. </p>
+
+<p>Wind-Blow to the mic on the phone to provide CO2 for the tree.</p>
+
+<p>Rain-There is a bar indicating the volume of the rain.</p>
+
+<p>Shake- Shake phone to cover the other tree in pests. Every successful action could bring you scores, at in the end the highest score go to the winner.</p>
+
+
+  <div class="home">
+      <p class="pick"> Pick your team</p>
+      <button type="button" id="team1" class="btn btn-primary">Join team 1</button>
+      <button type="button" id="team2" class="btn btn-danger">Join team 2</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="gamescreen" style="display: none">
+
+<img id="sun" src="sun.png" style="padding-top: 200px; z-index: 10; position: absolute; left: 43%; top: 60px;"/>
+  <div class="container">
+    <center><h2 id="teamnumber"></h2></center>
+    <div class="game-display">
+      <canvas id="canvas"></canvas>
+  </div>
+    <div class="game-controls team1">
+      <button style="position: absolute; right: 150px;" class="stunt btn btn-danger">Stunt!</button>
+      <button style="position: absolute; left: 150px;"class="grow btn btn-primary">Grow!</button>
+    </div>
+
+    <div class="game-controls team2">
+      <button style="position: absolute; right: 150px;" class="grow btn btn-danger">Grow!</button>
+      <button style="position: absolute; left: 150px;"class="stunt btn btn-primary">Stunt!</button>
+    </div>
+  </div>
+</div>
+<br/>
+<br/>
+<br/>
+<p id="gamestatus"></p>
+<script>
+        var counter = 0;
+        var canvas = document.getElementById("canvas");
+        var ctx = canvas.getContext("2d");
+        
+        //Lets resize the canvas to occupy the full page
+        var W = 1000;
+        var H = 400;
+        canvas.width = W;
+        canvas.height = H;
+        
+        //Some variables
+        var length, divergence, reduction, line_width, start_points = [];
+        var tmpAngle = -270;
+	var tmpProgress;
+
+	var bg = new Image();
+        bg.src = "http://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Wadi_Bani_Khalid_East_RB.jpg/1024px-Wadi_Bani_Khalid_East_RB.jpg";
+	
+        
+        
+        function clearCanvas () {
+//            ctx.fillStyle = "rgba(0,0,0,0)";
+  //          ctx.clearRect(0, 0, W, H);
+	    ctx.drawImage (bg, 0, 0);
+
+            ctx.fillStyle = "rgba(250,250,250, 0.7)";
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.fillStyle = "rgba(0,0,250, 0.3)";
+            ctx.fillRect(0, 0, W/2, H);
+
+            ctx.fillStyle = "rgba(250,0, 0, 0.2)";
+            ctx.fillRect(W/2, 0, W, H);
+        }
+
+        
+        function init(treestart, progress)
+        {
+                //filling the canvas white
+                tmpProgress = progress;
+                //Lets draw the trunk of the tree
+                //lets randomise the variables
+                //length of the trunk - 100-150
+                length = progress*1.35; //100 + Math.round(Math.random()*50);
+                //angle at which branches will diverge - 10-60
+                divergence = 15 + length/5;
+                //Every branch will be 0.75times of the previous one - 0.5-0.75
+                //with 2 decimal points
+                reduction = 0.37 + length/390; //Math.round(50 + Math.random()*20)/100;
+                //width of the branch/trunk
+                line_width = length/6;
+                
+		tmpAngle = (Math.sin(tHeight1 + tHeight2) * length) / 20 + 90;
+
+                //This is the end point of the trunk, from where branches will diverge
+                var trunk = {x: W/treestart, y: length, angle: tmpAngle};
+                //It becomes the start point for branches
+                start_points = []; //empty the start points on every init();
+                start_points.push(trunk);
+                
+                //Y coordinates go positive downwards, hence they are inverted by deducting it
+                //from the canvas height = H
+                ctx.beginPath();
+                ctx.moveTo(trunk.x, H);
+                ctx.lineTo(trunk.x, H-trunk.y);
+                ctx.strokeStyle = "rgba(" + parseInt(255 - (treestart * 15 + progress + Math.random()*25)) + ", " + parseInt(30 + progress/5) + ", " + parseInt(10 + treestart*15) + ", 1)";
+//                ctx.strokeStyle = "rgba(" + progress + ", " + 255 - progress*2 + ", 155, 1)";
+                ctx.lineWidth = line_width;
+                ctx.stroke();
+                
+                branches(tmpAngle, treestart);
+        }
+        
+        //Lets draw the branches now
+        function branches(treeAngle, seed)
+        {
+                //reducing line_width and length
+                length = length * reduction;
+
+                line_width = line_width * 0.8;
+                ctx.lineWidth = line_width;
+                var russle = Math.sin(tmpAngle) * 2;
+                var new_start_points = [];
+                ctx.beginPath();
+                for(var i = 0; i < start_points.length; i++)
+                {
+                        var sp = start_points[i];
+                        //2 branches will come out of every start point. Hence there will be
+                        //2 end points. There is a difference in the divergence.
+                        var ep1 = get_endpoint(sp.x, sp.y, sp.angle+divergence, length);
+                        var ep2 = get_endpoint(sp.x, sp.y, sp.angle-divergence, length);
+                        //drawing the branches now
+                        ctx.moveTo(sp.x, H-sp.y);
+                        ctx.lineTo(ep1.x, H-ep1.y);
+                        ctx.moveTo(sp.x, H-sp.y);
+                        ctx.lineTo(ep2.x, H-ep2.y);
+			//russle ++;
+                        //Time to make this function recursive to draw more branches
+                        ep1.angle = sp.angle + divergence - russle; // treeAngle/2; //sp.angle+divergence*treeAngle/10 - 55;
+                        ep2.angle = sp.angle - divergence + russle; //treeAngle*2; //sp.angle-divergence*treeAngle/10 - 25;
+                        new_start_points.push(ep1);
+                        new_start_points.push(ep2);
+                }
+                //Lets add some more color
+                if(length < 11) ctx.strokeStyle = "rgba(" + parseInt(100 + (Math.sin(tHeight2) + 1) * 50) + ", " + parseInt(200 - 20 * Math.sin(length) * length) + ", " + parseInt(40 - tmpProgress) + ", 1)";
+                else ctx.strokeStyle = "rgba(" + length + ", " + 2*length + ", 2, 1)";
+                ctx.stroke();
+                start_points = new_start_points;
+                //recursive call - only if length is more than 2.
+                //Else it will fall in an long loop
+                if(length > 6) branches(treeAngle, seed); //setTimeout(branches, 1);
+		else counter ++;
+        }
+
+        function get_endpoint(x, y, a, length)
+        {
+                //This function will calculate the end points based on simple vectors
+                //http://physics.about.com/od/mathematics/a/VectorMath.htm
+                //You can read about basic vectors from this link
+                var epx = x + length * Math.cos(a*Math.PI/180);
+                var epy = y + length * Math.sin(a*Math.PI/180);
+                return {x: epx, y: epy};
+        }
+
+       function drawAgain () {
+        clearCanvas ();
+	if (counter > 2) counter = 0
+        init(1.35, tHeight2);
+        init(4, tHeight1);
+       }
+
+</script>
+
+</body>
+</html>
